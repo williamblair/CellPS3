@@ -6,9 +6,9 @@ Uses pthreads to run a hello world program on each SPU; code from here:
 
   https://web.cs.sunyit.edu/~blairw/CellSDK3.1Docs/programming/CBE_Programming_Tutorial_v3.1.pdf
 
-# dma_tut
-Example of how to send data between the PPU/SPUs using the DMA in the form of an absolute value calculator;
-code from here:
+# dma_tut*
+Example of how to send data between the PPU/SPUs using the DMA in the form of an absolute value calculator.
+Starts with a single SPE, then uses a single SPE with SPU SIMD intrinsics, then uses 4 SPEs. Code from here:
 
   https://www.kernel.org/pub/linux/kernel/people/geoff/cell/ps3-linux-docs/CellProgrammingTutorial/BasicsOfSPEProgramming.html
 
