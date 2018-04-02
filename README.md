@@ -19,3 +19,10 @@ with euler_spe2. Code included with the Cell 3.1 SDK in the directory:
   /opt/cell/sdk/src
   
 In the tutorial_source.tar file
+
+# framebuffer_test
+Drawing to the screen using the linux frame buffer; code from here:
+
+  http://betteros.org/tut/graphics1.php#fbdev
+
+
