@@ -8,16 +8,18 @@ GameOfLife::GameOfLife()
     board[0] = NULL;
     board[1] = NULL;
     
+    BOARD_WIDTH=0; BOARD_HEIGHT=0;
+    
     /* Create the Board */
     // include a border padding in the array, so we don't have to check for edge conditions
-    int boardSize = (BOARD_WIDTH+2) * (BOARD_HEIGHT+2);
-    std::cout << "Initializing board of size " << boardSize << std::endl;
-    board[0] = new int[boardSize];
-    board[1] = new int[boardSize];
+    //int boardSize = (BOARD_WIDTH+2) * (BOARD_HEIGHT+2);
+    //std::cout << "Initializing board of size " << boardSize << std::endl;
+    //board[0] = new int[boardSize];
+    //board[1] = new int[boardSize];
     
     /* Fill with a default value */
-    memset(board[0], 0, boardSize*sizeof(int));
-    memset(board[1], 0, boardSize*sizeof(int));
+    //memset(board[0], 0, boardSize*sizeof(int));
+    //memset(board[1], 0, boardSize*sizeof(int));
 }
 
 GameOfLife::~GameOfLife()
@@ -27,6 +29,55 @@ GameOfLife::~GameOfLife()
     if(board[1]) delete[] board[1];
 }
 
+/*********************************************************/
+/**Read the initial cell configuration from a text file **/
+/*********************************************************/
+bool GameOfLife::readFromFile(const char *fileName)
+{
+    int y,x;
+    std::ifstream myFile;
+    
+    /* Clear the board if already initialized */
+    if(board[0]) delete[] board[0];
+    if(board[1]) delete[] board[1];
+    
+    /* Open the file */
+    myFile.open(fileName);
+    if(!myFile.is_open()) {
+        std::cerr << "Failed to open " << fileName << std::endl;
+        return false;
+    }
+    
+    /* Read in the file dimensions */
+    myFile >> BOARD_WIDTH >> BOARD_HEIGHT;
+    
+     /* Create the Board */
+    // include a border padding in the array, so we don't have to check for edge conditions
+    int boardSize = (BOARD_WIDTH+2) * (BOARD_HEIGHT+2);
+    //std::cout << "Initializing board of size " << boardSize << std::endl;
+    board[0] = new int[boardSize];
+    board[1] = new int[boardSize];
+    
+    /* Fill with a default value (including the padding) */
+    memset(board[0], 0, boardSize*sizeof(int));
+    memset(board[1], 0, boardSize*sizeof(int));
+    
+    /* Read in the board */
+    for(y=0; y<BOARD_HEIGHT; y++)
+    {
+        for(x=0; x<BOARD_WIDTH; x++)
+        {
+            int val;
+            myFile >> val;
+            putValue(y,x,val);
+        }
+    }
+    
+    /* close the file */
+    myFile.close();
+    
+    return true;
+}
 
 /*********************************************************/
 /**                  Run the Simulation                 **/

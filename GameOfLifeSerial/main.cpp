@@ -7,16 +7,33 @@
 
 int main(int argc, char **argv)
 {
+    int numGens=0;
     GameOfLife game;
     
-    game.putValue(4,5, 1);
-    game.putValue(5,5, 1);
-    game.putValue(5,6, 1);
+    /* Get command line args */
+    if(argc != 3) {
+        std::cout << "Usage: "<< argv[0] << " <boardfile> <num generations>\n";
+        std::cout << "Example: " << argv[0] << " board.txt 10\n";
+        return 0;
+    }
+    
+    /* Read in the board */
+    if(!game.readFromFile(argv[1])) {
+        return -1;
+    }
+    
+    /* Get the number of generations */
+    numGens = atoi(argv[2]);
+    
+    /* 'Blinker' Example */
+    //game.putValue(4,4, 1);
+    //game.putValue(4,5, 1);
+    //game.putValue(4,6, 1);
     
     //std::cout << "Gen 1:\n";
     //game.printBoard();
     
-    game.run(5);
+    game.run(numGens);
     
     //std::cout << "End Gen:\n";
     //game.printBoard();

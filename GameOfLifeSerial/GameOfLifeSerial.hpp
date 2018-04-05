@@ -6,8 +6,8 @@
 #include <cstring>
 #include <cstdlib>
 
-#define BOARD_WIDTH  10
-#define BOARD_HEIGHT 10
+//#define BOARD_WIDTH  10
+//#define BOARD_HEIGHT 10
 
 class GameOfLife
 {
@@ -18,11 +18,21 @@ public:
     
     /* Run the simulation for the given number of generations */
     void run(int numGenerations);
+    
+    /* Set a specified cell on a board */
+    void putValue(int y, int x, int val);
+    
+    /* Read in the initial cell configuration from a text file */
+    bool readFromFile(const char *fileName);
 
-//private:
+private:
     
     /* The Game Board; the current and new version */
     int *board[2];
+    
+    /* The width and height of the board */
+    int BOARD_WIDTH;
+    int BOARD_HEIGHT;
     
     /* Calculate the new status of a cell based on the rules */
     int calcNewStatus(int y, int x);
@@ -34,7 +44,6 @@ public:
     void printBoard(void);
     int  getValue(int y, int x);
     void putNextGenValue(int y, int x, int val);
-    void putValue(int y, int x, int val);
 };
 
 #endif // GAME_H_INCLUDED
