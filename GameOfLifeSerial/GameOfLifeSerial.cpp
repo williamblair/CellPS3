@@ -36,22 +36,31 @@ void GameOfLife::run(int numGenerations)
     // TODO - actually run for specified number of generations 
     
     int y,x;
+    int curGen;
     
-    for(y=0; y<BOARD_HEIGHT; y++)
+    
+    for(curGen=0; curGen<numGenerations; curGen++)
     {
-        for(x=0; x<BOARD_WIDTH; x++)
+        /* Display the generation status */
+        std::cout << "Gen " << curGen+1 << ":\n";
+        printBoard();
+        
+        for(y=0; y<BOARD_HEIGHT; y++)
         {
-            /* Figure out the next generation value */
-            int newStatus = calcNewStatus(y,x);
-            
-            /* apply the next generation value to the
-             * new generation */
-            putNextGenValue(y,x,newStatus);            
+            for(x=0; x<BOARD_WIDTH; x++)
+            {
+                /* Figure out the next generation value */
+                int newStatus = calcNewStatus(y,x);
+                
+                /* apply the next generation value to the
+                 * new generation */
+                putNextGenValue(y,x,newStatus);            
+            }
         }
+        
+        /* Copy the new generation into the current generation */
+        memcpy(board[0], board[1], (BOARD_WIDTH+2)*(BOARD_HEIGHT+2)*sizeof(int));
     }
-    
-    /* Copy the new generation into the current generation */
-    memcpy(board[0], board[1], (BOARD_WIDTH+2)*(BOARD_HEIGHT+2)*sizeof(int));
 }
 
 /*********************************************************/
@@ -62,29 +71,42 @@ int GameOfLife::calcNewStatus(int y, int x)
     /* Is the cell currently alive or dead? */
     int cellStatus = getValue(y,x);
     
-    /* The new status of the cell based on the rules */
+    /* The new status of the cell based on the rules 
+     * by default leave it as it was in the prev. gen. */
     int finalStatus=cellStatus;
     
     /* If alive... */
     if(cellStatus == 1)
     {
-        std::cout << "Found alive cell!\n";
+        //std::cout << "Found alive cell!\n";
         
         int n = numNeighbors(y,x);
-        std::cout << "num neighbors: " << n << std::endl;
+        //std::cout << "num neighbors: " << n << std::endl;
         
         /* The cell dies if it has < 2 neighbors (loneliness)
          * or > 3 neighbors (starved for food) */
         if(n < 2 || n > 3) {
-            std::cout << "Starving/Lonely Cell! Killing: " << y 
-                << ", " << x << "\n";
+            //std::cout << "Starving/Lonely Cell! Killing: " << y 
+            //    << ", " << x << "\n";
             finalStatus = 0;
         }
+        
+        /* Otherwise leave the cell alive */
     }
     
     /* If dead... */
     else
     {
+        int n = numNeighbors(y,x);
+        
+        /* A dead cell becomes alive if it has exactly
+         * 3 neighbors */
+        if(n == 3) {
+            //std::cout << "Found 3 neighbor on dead cell!\n";
+            finalStatus = 1;
+        }
+        
+        /* Otherwise leave the cell dead */
     }
     
     return finalStatus;
