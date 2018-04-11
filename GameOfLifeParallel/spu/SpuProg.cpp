@@ -49,7 +49,7 @@ int main(unsigned long long spe, unsigned long long argp, unsigned long long env
     //printf("sArg size: %d\n", sArg.size);
     
     //unsigned long long myDataP = (unsigned long long)(((int*)sArg.ea_in)+(sArg.size*myRank));
-    unsigned long long myDataP = sArg.ea_in+((unsigned long long)sArg.size*(unsigned long long)myRank);
+    //unsigned long long myDataP = sArg.ea_in+((unsigned long long)sArg.size*(unsigned long long)myRank);
     
     /* Get input data */
     spu_mfcdma64(in_spe, mfc_ea2h(sArg.ea_in), mfc_ea2l(sArg.ea_in),
@@ -72,7 +72,16 @@ int main(unsigned long long spe, unsigned long long argp, unsigned long long env
     
     //printf("%s", output);
     
+    /* Test setting output data */
+    for(i=0;i<sArg.size; i++) {
+        out_spe[i] = myRank;
+    }
+    
     /* Put output data */
+    spu_mfcdma64(out_spe, mfc_ea2h(sArg.ea_out), mfc_ea2l(sArg.ea_out),
+                sArg.size * sizeof(int), tag, MFC_PUT_CMD);
+    spu_writech(MFC_WrTagMask, 1 << tag);
+    spu_mfcstat(MFC_TAG_UPDATE_ALL);
     
     // TODO
     

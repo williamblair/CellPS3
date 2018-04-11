@@ -14,7 +14,9 @@
 typedef struct {
     int               rank;    // testing sending this as environment pointer
     int               *arr;    // base array
+    int               *out;    // where the SPE should write it's computed data
     int               size;    // amount for this thread
+    int               start;   // where the thread's area starts in the array
     spe_context_ptr_t speCtx;  // SPE context
     pthread_t         pthread; // the PPU thread
 } ppuThreadArgs;

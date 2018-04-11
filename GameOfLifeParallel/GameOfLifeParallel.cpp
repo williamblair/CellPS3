@@ -18,7 +18,11 @@ GameOfLifeParallel::~GameOfLifeParallel()
 /*************************************************************/
 void GameOfLifeParallel::run(int numGenerations)
 {
-    const int SIZE = 64;
+    int i,j;
+    const int SIZE = 80;
+    
+    /* Have this be sent in from read */
+    //const int numCols = 8;
     
     // test array to split between SPEs
     // each SPE should get a row
@@ -31,55 +35,64 @@ void GameOfLifeParallel::run(int numGenerations)
         6, 6, 6, 6, 6, 6, 6, 6,
         7, 7, 7, 7, 7, 7, 7, 7,
         8, 8, 8, 8, 8, 8, 8, 8,
+        9, 9, 9, 9, 9, 9, 9, 9,
+        10, 10, 10, 10, 10, 10, 10, 10
     };
     
     int out[SIZE] a16;
     
+    /* Fill the array with data */
+    memset(out, 0, SIZE*sizeof(int));
+    
     // TODO - error check
     
     /* Calculate how much data to send the SPE */
-    const int amount = SIZE / NUM_THREADS;
+    //const int amount = (SIZE / NUM_THREADS)*3; // need the previous and next row for computation
+    const int amount = 24;
+    const int numCols = amount / 3;
+    std::cout << "Amount: " << amount << std::endl;
     
-    int i;
+    //int i;
     ppuThreadArgs pArgs[NUM_THREADS];
     
     /* Loop through each thread to create */
     for(i=0; i<NUM_THREADS; i++) {
         
         /* Create a pthread which will spawn a SPE thread */
-        createThread(&pArgs[i], i, in, amount);
+        createThread(&pArgs[i], i, in, amount, numCols, out);
+        
+        // DEBUG
+        pthread_join(pArgs[i].pthread, NULL);
     }
     
     /* Wait for each thread to finish */
-    for(i=0; i<NUM_THREADS; i++) {
-        pthread_join(pArgs[i].pthread, NULL);
-    }
+    //for(i=0; i<NUM_THREADS; i++) {
+    //    pthread_join(pArgs[i].pthread, NULL);
+   // }
     
     /* Destroy each thread context */
     for(i=0; i<NUM_THREADS; i++) {
         spe_context_destroy(pArgs[i].speCtx);
     }
     
-    /* Create the thread */
-    //createThread(&pArg);
-    
-    /* Wait for it to finish */
-    //pthread_join(pArg.pthread, NULL);
-    
-    /* Destroy its spe context */
-    //spe_context_destroy(pArg.speCtx);
-    //if(inP) delete[] inP;
-    
-    //if(out) delete[] out;
+    /* See if our result was written to */
+    // loop through each row
+    std::cout << "\nOut:\n";
+    for(i=0; i<10; i++) {
+        // loop through each column
+        for(j=0; j<numCols;j++){
+            std::cout << out[i*numCols+j] <<", ";
+        }
+        std::cout << std::endl;
+    }
 }
 
 /*************************************************************/
 /**      Create and run a ppu (and hence spu) thread        **/
 /*************************************************************/
-void GameOfLifeParallel::createThread(ppuThreadArgs *pArg, int rank, int *arr, int size)
+void GameOfLifeParallel::createThread(ppuThreadArgs *pArg, int rank, int *arr, int size, int numCols, int *out)
 {
-    const int SIZE = 64; // test 64 numbers
-    int out[SIZE] a16; // test output
+    const int SIZE = 80; // test 64 numbers
     
     /* Set the rank of the thread */
     pArg->rank = rank;
@@ -87,6 +100,11 @@ void GameOfLifeParallel::createThread(ppuThreadArgs *pArg, int rank, int *arr, i
     /* Arguments to be sent to the SPE */
     pArg->arr = arr;
     pArg->size = size;
+    pArg->start = rank*numCols; // each thread needs the previous and next row,
+                                // so the data sent will overlap and hence
+                                // the need to know the width of the array
+                                
+    pArg->out = out;
     
     /* Create SPE context */
     pArg->speCtx = spe_context_create(0,NULL);
@@ -119,10 +137,10 @@ void *GameOfLifeParallel::ppuThreadFunc(void *arg)
     ppuThreadArgs *pArg = (ppuThreadArgs*)arg;
     
     /* Calculate the starting point in the array for the thread */
-    mySarg.ea_in = (unsigned long) (pArg->arr+(pArg->size*pArg->rank));
+    mySarg.ea_in = (unsigned long) (pArg->arr+pArg->start);
     
-    // NULL for now
-    mySarg.ea_out = (unsigned long) 0;
+    /* Starting point for the thread to write its data to */
+    mySarg.ea_out = (unsigned long) (pArg->out+pArg->start);
     
     /* The amount of data for the SPE to read */
     mySarg.size = pArg->size;
