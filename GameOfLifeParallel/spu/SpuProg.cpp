@@ -22,7 +22,7 @@ int out_spe[MAX_BUFSIZE] a16;
 speParams sArg a16;
 
 /* SPE program entry point */
-int main(unsigned long long spe, unsigned long long argp)
+int main(unsigned long long spe, unsigned long long argp, unsigned long long envp)
 {
     unsigned int i;
     int tag = 1;
@@ -41,11 +41,21 @@ int main(unsigned long long spe, unsigned long long argp)
     spu_writech(MFC_WrTagMask, 1 << tag);
     spu_mfcstat(MFC_TAG_UPDATE_ALL);
     
+    /* DEBUG - get rank from envp 
+     * IT WORKS!!! */
+    int myRank = (int)envp;
+    printf("SPE 0x%llX rank: %d\n", spe, myRank);
+    
     //printf("sArg size: %d\n", sArg.size);
+    
+    //unsigned long long myDataP = (unsigned long long)(((int*)sArg.ea_in)+(sArg.size*myRank));
+    unsigned long long myDataP = sArg.ea_in+((unsigned long long)sArg.size*(unsigned long long)myRank);
     
     /* Get input data */
     spu_mfcdma64(in_spe, mfc_ea2h(sArg.ea_in), mfc_ea2l(sArg.ea_in),
                 sArg.size * sizeof(int), tag, MFC_GET_CMD);
+    //spu_mfcdma64(in_spe, mfc_ea2h(myDataP), mfc_ea2l(myDataP),
+    //            sArg.size * sizeof(int), tag, MFC_GET_CMD);
     spu_writech(MFC_WrTagMask, 1 << tag);
     spu_mfcstat(MFC_TAG_UPDATE_ALL);
     

@@ -12,9 +12,11 @@
 
 /* PPU thread parameters */
 typedef struct {
+    int               rank;    // testing sending this as environment pointer
+    int               *arr;    // base array
+    int               size;    // amount for this thread
     spe_context_ptr_t speCtx;  // SPE context
     pthread_t         pthread; // the PPU thread
-    speParams         *sArg; // argument to send the SPE thread
 } ppuThreadArgs;
 
 #endif

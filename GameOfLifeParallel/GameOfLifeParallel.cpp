@@ -34,29 +34,20 @@ void GameOfLifeParallel::run(int numGenerations)
     };
     
     int out[SIZE] a16;
-    //int *out = new int[SIZE];
     
     // TODO - error check
     
     /* Calculate how much data to send the SPE */
     const int amount = SIZE / NUM_THREADS;
     
-    // DEBUG HERE
-    int i, start;
+    int i;
     ppuThreadArgs pArgs[NUM_THREADS];
-
-    //std::cout << "PPU Amount: " << amount << std::endl;
     
     /* Loop through each thread to create */
     for(i=0; i<NUM_THREADS; i++) {
         
-        /* Calculate where in the array to start for the SPE */
-        start = i*amount;
-        createThread(&pArgs[i], in+(i*amount), amount);
-        
-        //threads[i].create()
-        //threads[i].copyArr((int*)(in+(i*amount)), amount);
-        //threads[i].create(out);
+        /* Create a pthread which will spawn a SPE thread */
+        createThread(&pArgs[i], i, in, amount);
     }
     
     /* Wait for each thread to finish */
@@ -65,9 +56,9 @@ void GameOfLifeParallel::run(int numGenerations)
     }
     
     /* Destroy each thread context */
-    //for(i=0; i<NUM_THREADS; i++) {
-    //    spe_context_destroy(pArgs[i].speCtx);
-   // }
+    for(i=0; i<NUM_THREADS; i++) {
+        spe_context_destroy(pArgs[i].speCtx);
+    }
     
     /* Create the thread */
     //createThread(&pArg);
@@ -85,35 +76,17 @@ void GameOfLifeParallel::run(int numGenerations)
 /*************************************************************/
 /**      Create and run a ppu (and hence spu) thread        **/
 /*************************************************************/
-void GameOfLifeParallel::createThread(ppuThreadArgs *pArg, int *arr, int size)
+void GameOfLifeParallel::createThread(ppuThreadArgs *pArg, int rank, int *arr, int size)
 {
     const int SIZE = 64; // test 64 numbers
     int out[SIZE] a16; // test output
     
-    //const int localStart = start;
+    /* Set the rank of the thread */
+    pArg->rank = rank;
     
-    // test data to send to the SPE
-    
-    /* Aligned 16 attribute is VERY important as you will
-     * get a 'Bus Error' without it ! */
-    speParams sArg a16;
-    //ppuThreadArgs pArg;
-   
-    //std::cout << "createThread amount: " << amount << std::endl;
-    
-    /* Define parameters for the SPE */
-    //sArg.ea_in = (unsigned long ) in;
-    //sArg.ea_in = (unsigned long ) (arr+start);
-    //std::cout << "CreateThread start: " << start << std::endl;
-    //std::cout << "CreateThread local start: " << localStart << std::endl;
-    //sArg.ea_in = (unsigned long) (&arr[localStart]);
-    sArg.ea_in = (unsigned long) arr;
-    sArg.ea_out = (unsigned long) out;
-    //sArg.size = SIZE;
-    sArg.size = size;
-    
-    /* Set the pointer for the ppu to send the spu for args */
-    pArg->sArg = &sArg;
+    /* Arguments to be sent to the SPE */
+    pArg->arr = arr;
+    pArg->size = size;
     
     /* Create SPE context */
     pArg->speCtx = spe_context_create(0,NULL);
@@ -137,15 +110,30 @@ void GameOfLifeParallel::createThread(ppuThreadArgs *pArg, int *arr, int size)
 /*************************************************************/
 void *GameOfLifeParallel::ppuThreadFunc(void *arg)
 {
+    /* SPE thread arguments 
+     * Aligned 16 attribute is very important as we'll get a 
+     * bus error without it! */
+    speParams mySarg a16;
+    
     /* Cast the function arg as our ppu thread arg */
     ppuThreadArgs *pArg = (ppuThreadArgs*)arg;
+    
+    /* Calculate the starting point in the array for the thread */
+    mySarg.ea_in = (unsigned long) (pArg->arr+(pArg->size*pArg->rank));
+    
+    // NULL for now
+    mySarg.ea_out = (unsigned long) 0;
+    
+    /* The amount of data for the SPE to read */
+    mySarg.size = pArg->size;
     
     /* Get the entry point to the SPE */
     unsigned int entry = SPE_DEFAULT_ENTRY;
     
-    /* Run the SPE context */
-    if( spe_context_run(pArg->speCtx, &entry, 0, pArg->sArg, 
-            NULL,NULL) < 0) {
+    /* Run the SPE context
+     * rank is sent as the envp */
+    if( spe_context_run(pArg->speCtx, &entry, 0, &mySarg, 
+            (void*)pArg->rank,NULL) < 0) {
         perror("Failed running context\n");
         exit(1);
     }

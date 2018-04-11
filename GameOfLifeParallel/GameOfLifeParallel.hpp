@@ -37,7 +37,7 @@ private:
     
     // TODO - add args
     /* Create and run a ppu (and hence spu) thread */
-    void createThread(ppuThreadArgs *pArg, int *arr, int size);
+    void createThread(ppuThreadArgs *pArg, int rank, int *arr, int size);
     
     /* Our local pthread function to create a SPE thread */
     static void *ppuThreadFunc(void *arg);
