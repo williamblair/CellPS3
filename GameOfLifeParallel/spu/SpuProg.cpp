@@ -13,7 +13,8 @@
 #define a128 __attribute__ ((aligned (128)))
 #define aunused __attribute__ ((unused))
 
-#define MAX_BUFSIZE 128
+//#define MAX_BUFSIZE 128
+#define MAX_BUFSIZE 2048
 
 // test input/output data
 int in_spe[MAX_BUFSIZE] a16;

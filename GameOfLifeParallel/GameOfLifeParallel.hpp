@@ -16,7 +16,8 @@
 #define GAME_PARALLEL_INCLUDED
 
 // max size you can send through the dma at once
-#define MAX_BUFSIZE 128
+//#define MAX_BUFSIZE 128
+#define MAX_BUFSIZE 2048
 
 // max size of a row based on padding (prev and next row)
 #define MAX_ROWSIZE (MAX_BUFSIZE/3)
