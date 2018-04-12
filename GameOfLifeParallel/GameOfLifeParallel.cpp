@@ -7,10 +7,14 @@
 /**************************************************************/
 GameOfLifeParallel::GameOfLifeParallel()
 {
+    //inBoard = NULL;
+    //outBoard = NULL;
 }
 
 GameOfLifeParallel::~GameOfLifeParallel()
 {
+    //if(inBoard) delete[] inBoard;
+    //if(outBoard) delete[] outBoard;
 }
 
 /*************************************************************/
@@ -18,57 +22,81 @@ GameOfLifeParallel::~GameOfLifeParallel()
 /*************************************************************/
 void GameOfLifeParallel::run(int numGenerations)
 {
-    int i,j;
-    const int SIZE = 80;
+    int i, curGen;
+    //const int SIZE = 80;
     
     /* Have this be sent in from read */
     //const int numCols = 8;
     
     // test array to split between SPEs
     // each SPE should get a row
-    int in[SIZE] a16 = {
-        1, 1, 1, 1, 1, 1, 1, 1,
-        2, 2, 2, 2, 2, 2, 2, 2,
-        3, 3, 3, 3, 3, 3, 3, 3,
-        4, 4, 4, 4, 4, 4, 4, 4,
-        5, 5, 5, 5, 5, 5, 5, 5,
-        6, 6, 6, 6, 6, 6, 6, 6,
-        7, 7, 7, 7, 7, 7, 7, 7,
-        8, 8, 8, 8, 8, 8, 8, 8,
-        9, 9, 9, 9, 9, 9, 9, 9,
-        10, 10, 10, 10, 10, 10, 10, 10
-    };
+    /*int in[SIZE] a16 = {
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 1, 0, 0, 0, 0, 0,
+        0, 0, 1, 0, 0, 0, 0, 0,
+        0, 0, 1, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0
+    };*/
     
-    int out[SIZE] a16;
+    /* The output array to write to */
+    //int out[SIZE] a16;
     
     /* Fill the array with data */
-    memset(out, 0, SIZE*sizeof(int));
+    //memset(out, 0, SIZE*sizeof(int));
     
     // TODO - error check
     
     /* Calculate how much data to send the SPE */
-    //const int amount = (SIZE / NUM_THREADS)*3; // need the previous and next row for computation
-    const int amount = 24;
+    //const int amount = 24;
+    const int amount = (BOARD_WIDTH+2)*3;
     const int numCols = amount / 3;
-    std::cout << "Amount: " << amount << std::endl;
     
-    //int i;
+    /* DEBUG - display input */
+    std::cout << "\nIn:\n";
+    printBoard(inBoard, BOARD_WIDTH, BOARD_HEIGHT);
+    
     ppuThreadArgs pArgs[NUM_THREADS];
     
-    /* Loop through each thread to create */
+    /* Init each SPE context */
     for(i=0; i<NUM_THREADS; i++) {
-        
-        /* Create a pthread which will spawn a SPE thread */
-        createThread(&pArgs[i], i, in, amount, numCols, out);
-        
-        // DEBUG
-        pthread_join(pArgs[i].pthread, NULL);
+        initThread(&pArgs[i]);
     }
     
-    /* Wait for each thread to finish */
-    //for(i=0; i<NUM_THREADS; i++) {
-    //    pthread_join(pArgs[i].pthread, NULL);
-   // }
+    for(curGen=0; curGen<numGenerations; curGen++)
+    {
+        /* Loop through each thread to create */
+        for(i=0; i<NUM_THREADS; i++) {
+            
+            /* Create a pthread which will spawn a SPE thread */
+            createThread(&pArgs[i], i, inBoard, amount, numCols, outBoard);
+            
+            // DEBUG
+            //pthread_join(pArgs[i].pthread, NULL);
+        }
+        
+        /* Wait for each thread to finish */
+        for(i=0; i<NUM_THREADS; i++) {
+            pthread_join(pArgs[i].pthread, NULL);
+        }
+        
+        /* Display the result */
+        std::cout<<"Gen " << curGen+1 << std::endl;
+        printBoard(outBoard, BOARD_WIDTH, BOARD_HEIGHT);
+        
+        /* Copy the result into the current generation */
+        memcpy(inBoard, outBoard, ((BOARD_WIDTH+2)*(BOARD_HEIGHT+2)*sizeof(int)));
+        
+        // DEBUG
+        //std::cout << "InBoard:\n";
+        //printBoard(inBoard, BOARD_WIDTH, BOARD_HEIGHT);
+        //std::cout << "OutBoard:\n";
+        //printBoard(outBoard, BOARD_WIDTH, BOARD_HEIGHT);
+    }
     
     /* Destroy each thread context */
     for(i=0; i<NUM_THREADS; i++) {
@@ -77,14 +105,18 @@ void GameOfLifeParallel::run(int numGenerations)
     
     /* See if our result was written to */
     // loop through each row
-    std::cout << "\nOut:\n";
-    for(i=0; i<10; i++) {
-        // loop through each column
-        for(j=0; j<numCols;j++){
-            std::cout << out[i*numCols+j] <<", ";
-        }
-        std::cout << std::endl;
-    }
+    //std::cout << "\nOut:\n";
+    //printBoard(outBoard, BOARD_WIDTH, BOARD_HEIGHT);
+}
+
+/* Creates SPE contexts for each ppu arg */
+void GameOfLifeParallel::initThread(ppuThreadArgs *pArg)
+{
+    /* Create the SPE context */
+    pArg->speCtx = spe_context_create(0, NULL);
+    
+    /* Load the program into it */
+    spe_program_load(pArg->speCtx, &SpuProg);
 }
 
 /*************************************************************/
@@ -92,7 +124,6 @@ void GameOfLifeParallel::run(int numGenerations)
 /*************************************************************/
 void GameOfLifeParallel::createThread(ppuThreadArgs *pArg, int rank, int *arr, int size, int numCols, int *out)
 {
-    const int SIZE = 80; // test 64 numbers
     
     /* Set the rank of the thread */
     pArg->rank = rank;
@@ -103,14 +134,16 @@ void GameOfLifeParallel::createThread(ppuThreadArgs *pArg, int rank, int *arr, i
     pArg->start = rank*numCols; // each thread needs the previous and next row,
                                 // so the data sent will overlap and hence
                                 // the need to know the width of the array
-                                
-    pArg->out = out;
+        
+    /* We only want to write to the middle/main row, not the padding
+     * previous and after rows */
+    pArg->out = out+(size/3);
     
     /* Create SPE context */
-    pArg->speCtx = spe_context_create(0,NULL);
+    //pArg->speCtx = spe_context_create(0,NULL);
     
     /* Load program into context */
-    spe_program_load(pArg->speCtx, &SpuProg);
+    //spe_program_load(pArg->speCtx, &SpuProg);
     
     /* Run the local PPU thread that will run the SPU thread */
     pthread_create(&pArg->pthread, NULL, &ppuThreadFunc, pArg);
@@ -121,6 +154,49 @@ void GameOfLifeParallel::createThread(ppuThreadArgs *pArg, int rank, int *arr, i
     
     /* Destroy the program context */
     //spe_context_destroy(pArg.speCtx);
+}
+
+/*********************************************************/
+/**Read the initial cell configuration from a text file **/
+/*********************************************************/
+bool GameOfLifeParallel::readFromFile(const char *fileName)
+{
+    int y,x;
+    std::ifstream myFile;
+    
+    /* Open the file */
+    myFile.open(fileName);
+    if(!myFile.is_open()) {
+        std::cerr << "Failed to open " << fileName << std::endl;
+        return false;
+    }
+    
+    /* Read in the file dimensions */
+    myFile >> BOARD_WIDTH >> BOARD_HEIGHT;
+    
+     /* Create the Board */
+    // include a border padding in the array, so we don't have to check for edge conditions
+    int boardSize = (BOARD_WIDTH+2) * (BOARD_HEIGHT+2);
+    
+    /* Fill with a default value (including the padding) */
+    memset(inBoard, 0, boardSize*sizeof(int));
+    memset(outBoard, 0, boardSize*sizeof(int));
+    
+    /* Read in the board */
+    for(y=0; y<BOARD_HEIGHT; y++)
+    {
+        for(x=0; x<BOARD_WIDTH; x++)
+        {
+            int val;
+            myFile >> val;
+            putValue(y,x,val);
+        }
+    }
+    
+    /* close the file */
+    myFile.close();
+    
+    return true;
 }
 
 /*************************************************************/
@@ -158,3 +234,68 @@ void *GameOfLifeParallel::ppuThreadFunc(void *arg)
     
     return NULL;
 }
+
+/*********************************************************/
+/**                   Helper Functions                  **/
+/*********************************************************/
+void GameOfLifeParallel::printBoard(int *arr, int width, int height)
+{
+    int i,j;
+    std::cout << std::endl;
+    for(i=1; i<height+1; i++)
+    {
+        for(j=1; j<width+1; j++)
+        {
+            /* Compiler gives warning otherwise */
+            std::string space = " ";
+            
+            /* Get the current value from the board entry */
+            int val = arr[i*(width+2)+j];
+            
+            /* If the entry is a one print it otherwise a space */
+            std::cout << (val == 1) ? "1" : space;
+        }
+        
+        /* Move to the next line */
+        std::cout << std::endl;
+    }
+    std::cout << std::endl;
+}
+
+void GameOfLifeParallel::putValue(int y, int x, int val)
+{
+    x+=1; y+=1; // add 1 for padding
+    
+    if(x > BOARD_WIDTH + 1 || y > BOARD_HEIGHT + 1) {
+        std::cerr << "putValue: Invalid board location: " << x 
+            << ", " << y << std::endl;
+        return;
+    }
+    
+    int loc = y * (BOARD_WIDTH + 2) + x;
+    inBoard[loc] = val;
+    //std::cout << "Putting " << val << "at " << loc << std::endl;
+}
+
+void GameOfLifeParallel::putNextGenValue(int y, int x, int val)
+{
+    x+=1; y+=1; // add 1 for padding
+    
+    if(x > BOARD_WIDTH + 1 || y > BOARD_HEIGHT + 1) {
+        std::cerr << "putValue: Invalid board location: " << x 
+            << ", " << y << std::endl;
+        return;
+    }
+    
+    int loc = y * (BOARD_WIDTH + 2) + x;
+    outBoard[loc] = val;
+    //std::cout << "Putting " << val << "at " << loc << std::endl;
+}
+
+int GameOfLifeParallel::getValue(int y, int x)
+{
+    x+=1; y+=1;
+    int loc = y * (BOARD_WIDTH + 2) + x;
+    return inBoard[loc];
+}
+
